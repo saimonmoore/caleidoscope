@@ -187,8 +187,8 @@ module Utils
   
   def recognize_history
     case @keypress_history.join('')
-      when /saimon/
-        alert("Done by Sofia's father...")
+      when /saimon/, /about/
+        alert("Done by Sofia's father...November 2008")
         @keypress_history.clear
     end
   end
@@ -209,36 +209,63 @@ module Utils
   end
   
   def draw_random_oval
-    @oval = oval :top => rand(200), :left => rand(300), :radius => rand(80)    
+    @oval = oval :top => rand(200), :left => (51 + rand(300)), :radius => (10 + rand(80))
     animate_shape(@oval)
   end
   
   def draw_random_rect
-    @rect = rect :top => rand(200), :left => rand(300), :curve => rand(5), :width => rand(80),  :height => rand(80)        
+    @rect = rect :top => rand(200), :left => (51 + rand(300)), :curve => (1..5).rand, :width => (10 + rand(80)),  :height => (10 + rand(80))
     animate_shape(@rect)
   end
   
   def draw_random_star
     outer = 50 + rand(50.0)
-    inner = rand(50.0)
-    @star = star rand(200), rand(300), rand(10), outer, inner
+    inner = (10.0..50.0).rand
+    @star = star rand(200), (51 + rand(300)), (5 + rand(10)), outer, inner
     animate_shape(@star)
   end  
   
-  def animate_shape(shape)
+  def animate_shape(some_shape)
     Thread.new {
       start = Time.now
       @animation = animate(5) do |i|
-        shape.move((0..400).rand, (0..400).rand)
-        @animation.remove if Time.now > (start + 3)
+        if Time.now < (start + 3)
+          set_time_between_frames(0.0)
+          some_shape.move((0..400).rand, (0..400).rand)
+        else
+          set_time_between_frames(@time_between_frames + 1.0 / @speed)
+          some_shape.move((0..400).rand, (0..400).rand)
+          fade(some_shape, @animation, (1 - fade_interpolant))
+        end
       end
-      timer(15) { shape.remove }
     }.join
   end
   
+  def fade(some_shape, animation, opacity=1.0)
+    r,g,b = some_shape.style[:fill].red, some_shape.style[:fill].green, some_shape.style[:fill].blue
+    stroke(rgb(r,g,b, 0.45 * opacity))
+    fill(rgb(r,g,b, 0.45 * opacity))
+    if opacity <= 0
+      animation.remove
+      some_shape.remove
+    end
+  end  
+  
+  def set_time_between_frames(time)
+    @time_between_frames = [time, @fade_period].min
+    # scale the low-to-high half of a cosine curve and fit that between 0 and 1.
+    # factoring this into critter opacity makes for a smooth fade between two generations.
+    @fade_interpolant = (1 - Math.cos(@time_between_frames * Math::PI / @fade_period)) / 2
+  end 
+  
+  def fade_interpolant
+    @fade_interpolant
+  end  
+   
+  
 end
 
-Shoes.app :width => 408, :height => 346, :resizable => false do
+Shoes.app :width => 808, :height => 646, :resizable => false do
   extend Utils
     
   @keypress_history = []
@@ -249,21 +276,37 @@ Shoes.app :width => 408, :height => 346, :resizable => false do
   select_instrument(@midi, :piano1)
   # @midi.instruct_user!
   
-  background rgb(0, 0, 0)
+  @speed = 25
+  @time_between_frames = 0.0 #0.0 to 1.0 linearly, loop each frame
+  @fade_period = 0.40 #fade during the first __% of the time between frames
+  @fade_interpolant = 0.0 #0.0 to 1.0 on an s-curve
   
-  @instrument_field = para(select_instrument_message)
-  list_box :items => Utils::INSTRUMENTS.keys.map {|instrument| instrument.to_s } do |list|
-    select_instrument(@midi, list.text.intern)  
-    @instrument_field.text = select_instrument_message
-  end
+  background black
+  
+  stack(:top => 0, :left => 0, :attach => Window) {
+    flow(:height => 50) {
+      background azure
+      @instrument_field = para(select_instrument_message)
+      list_box :items => Utils::INSTRUMENTS.keys.map {|instrument| instrument.to_s } do |list|
+        select_instrument(@midi, list.text.intern)  
+        @instrument_field.text = select_instrument_message
+      end        
+    }
 
-  keypress do |k|
-    case k
-      when String
-        @midi.play key_to_note(k)
-        @keypress_history << k
-        random_shape
-        recognize_history
-    end
-  end
+    flow {
+      background black
+
+      keypress do |k|
+        case k
+          when String
+            @midi.play key_to_note(k)
+            @keypress_history << k
+            random_shape
+            recognize_history
+        end
+      end
+    }    
+  }
+
+
 end
