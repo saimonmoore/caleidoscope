@@ -189,6 +189,7 @@ module Utils
     case @keypress_history.join('')
       when /saimon/
         alert("Done by Sofia's father...")
+        @keypress_history.clear
     end
   end
   
