@@ -205,7 +205,35 @@ module Utils
     colour = random_colour
     stroke(colour)
     fill(colour)
-    oval :top => rand(200), :left => rand(300), :radius => rand(80)
+    eval "draw_random_#{%w(rect oval star)[rand(3)]}"
+  end
+  
+  def draw_random_oval
+    @oval = oval :top => rand(200), :left => rand(300), :radius => rand(80)    
+    animate_shape(@oval)
+  end
+  
+  def draw_random_rect
+    @rect = rect :top => rand(200), :left => rand(300), :curve => rand(5), :width => rand(80),  :height => rand(80)        
+    animate_shape(@rect)
+  end
+  
+  def draw_random_star
+    outer = 50 + rand(50.0)
+    inner = rand(50.0)
+    @star = star rand(200), rand(300), rand(10), outer, inner
+    animate_shape(@star)
+  end  
+  
+  def animate_shape(shape)
+    Thread.new {
+      start = Time.now
+      @animation = animate(5) do |i|
+        shape.move((0..400).rand, (0..400).rand)
+        @animation.remove if Time.now > (start + 3)
+      end
+      timer(15) { shape.remove }
+    }.join
   end
   
 end
@@ -221,7 +249,7 @@ Shoes.app :width => 408, :height => 346, :resizable => false do
   select_instrument(@midi, :piano1)
   # @midi.instruct_user!
   
-  # background rgb(0, 0, 0)
+  background rgb(0, 0, 0)
   
   @instrument_field = para(select_instrument_message)
   list_box :items => Utils::INSTRUMENTS.keys.map {|instrument| instrument.to_s } do |list|
