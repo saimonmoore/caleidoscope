@@ -184,11 +184,36 @@ module Utils
   def select_instrument_message
     "Choose an instrument (#{@instrument}):"
   end
+  
+  def recognize_history
+    case @keypress_history.join('')
+      when /saimon/
+        alert("Done by Sofia's father...")
+    end
+  end
+  
+  def shoes_colours
+    (Shoes::COLORS.keys*"\n").split("\n").sort
+  end
+  
+  def random_colour
+    eval(shoes_colours[rand(shoes_colours.length)])
+  end
+  
+  def random_shape
+    colour = random_colour
+    stroke(colour)
+    fill(colour)
+    oval :top => rand(200), :left => rand(300), :radius => rand(80)
+  end
+  
 end
 
-Shoes.app do
+Shoes.app :width => 408, :height => 346, :resizable => false do
   extend Utils
     
+  @keypress_history = []
+  
   # Setup midi driver
   @midi = MIDIator::Interface.new
   @midi.autodetect_driver
@@ -207,6 +232,9 @@ Shoes.app do
     case k
       when String
         @midi.play key_to_note(k)
+        @keypress_history << k
+        random_shape
+        recognize_history
     end
   end
 end
